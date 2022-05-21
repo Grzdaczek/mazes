@@ -79,11 +79,7 @@ impl<N, E> Graph<N, E> {
             })
             .count();
 
-        if self.directed {
-            count
-        } else {
-            count / 2
-        }
+        count
     }
 
     pub fn set_node(&mut self, index: usize, value: N) {
@@ -106,36 +102,46 @@ impl<N, E> Graph<N, E> {
         }
     }
 
-    pub fn node_mut(&mut self, index: usize) -> Option<&mut N> {
-        match self.node_count() > index {
-            true => Some(&mut self.nodes[index]),
-            false => None,
-        }
-    }
-
     pub fn remove_node(&mut self, index: usize) {
         self.edges.remove(index);
         self.nodes.remove(index);
     }
 
     pub fn set_edge(&mut self, index_a: usize, index_b: usize, value: E) {
-        // if self.directed;
-        self.edges.set(index_a, index_b, MatrixCell::Edge(value));
+        let (a, b) = if !self.directed && index_a < index_b {
+            (index_b, index_a)
+        } else {
+            (index_a, index_b)
+        };
+
+        self.edges.set(a, b, MatrixCell::Edge(value));
     }
 
     pub fn remove_edge(&mut self, index_a: usize, index_b: usize) {
-        self.edges.set(index_a, index_b, MatrixCell::Empty);
+        let (a, b) = if !self.directed && index_a < index_b {
+            (index_b, index_a)
+        } else {
+            (index_a, index_b)
+        };
+
+        self.edges.set(a, b, MatrixCell::Empty);
     }
 
     pub fn edge(&self, index_a: usize, index_b: usize) -> Option<EdgeRef<N, E>> {
-        if self.node_count() > index_a && self.node_count() > index_b {
-            match self.edges.get(index_a, index_b) {
+        let (a, b) = if !self.directed && index_a < index_b {
+            (index_b, index_a)
+        } else {
+            (index_a, index_b)
+        };
+
+        if self.node_count() > a && self.node_count() > b {
+            match self.edges.get(a, b) {
                 MatrixCell::Empty => None,
                 MatrixCell::Edge(e) => Some(EdgeRef {
                     graph: self,
                     value: e,
-                    index_a,
-                    index_b,
+                    index_a: a,
+                    index_b: b,
                 }),
             }
         } else {
@@ -143,15 +149,11 @@ impl<N, E> Graph<N, E> {
         }
     }
 
-    pub fn edge_mut(&mut self, _index_a: usize, _index_b: usize) -> Option<&mut E> {
-        todo!()
-    }
-
-    pub fn iter_nodes(&self) -> NodeIterator<N, E> {
+    pub fn nodes(&self) -> NodeIterator<N, E> {
         NodeIterator::new(self)
     }
 
-    pub fn iter_edges(&self) -> EdgeIterator<N, E> {
+    pub fn edges(&self) -> EdgeIterator<N, E> {
         EdgeIterator::new(self)
     }
 }
@@ -164,12 +166,12 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("Nodes:")?;
         f.debug_map()
-            .entries(self.iter_nodes().map(|n| (n.index, n.value)))
+            .entries(self.nodes().map(|n| (n.index, n.value)))
             .finish()?;
         f.write_str("\n")?;
         f.write_str("Edges:")?;
         f.debug_list()
-            .entries(self.iter_edges().map(|e| (e.index_a, e.index_b, e.value)))
+            .entries(self.edges().map(|e| (e.index_a, e.index_b, e.value)))
             .finish()?;
         f.write_str("\n")?;
 
@@ -310,20 +312,6 @@ impl<'a, N, E> Iterator for AdjEdgeIterator<'a, N, E> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn can_create_directed() {
-        let g = Graph::<u8, u8>::new_directed();
-        assert_eq!(g.node_count(), 0);
-        assert_eq!(g.edge_count(), 0);
-    }
-
-    #[test]
-    fn can_create_undirected() {
-        let g = Graph::<u8, u8>::new_undirected();
-        assert_eq!(g.node_count(), 0);
-        assert_eq!(g.edge_count(), 0);
-    }
-
     fn directed_test_graph() -> Graph<String, String> {
         let mut g = Graph::<String, String>::new_directed();
         g.add_node("A".to_owned());
@@ -350,6 +338,35 @@ mod tests {
     }
 
     #[test]
+    fn can_create() {
+        let a = Graph::<u8, u8>::new_directed();
+        assert_eq!(a.node_count(), 0);
+        assert_eq!(a.edge_count(), 0);
+
+        let b = Graph::<u8, u8>::new_undirected();
+        assert_eq!(b.node_count(), 0);
+        assert_eq!(b.edge_count(), 0);
+    }
+
+    #[test]
+    fn can_count_edges() {
+        let a = directed_test_graph();
+        assert_eq!(a.edge_count(), 3);
+
+        let b = undirected_test_graph();
+        assert_eq!(b.edge_count(), 2);
+    }
+
+    #[test]
+    fn can_count_nodes() {
+        let a = directed_test_graph();
+        assert_eq!(a.node_count(), 3);
+
+        let b = undirected_test_graph();
+        assert_eq!(b.node_count(), 3);
+    }
+
+    #[test]
     fn can_get_added_node() {
         let g = directed_test_graph();
 
@@ -363,27 +380,22 @@ mod tests {
     }
 
     #[test]
-    fn can_get_added_directed_edge() {
-        let g = directed_test_graph();
+    fn can_get_added_edge() {
+        let a = directed_test_graph();
+        assert_eq!(a.edge(0, 1).unwrap().value(), &"AB");
+        assert_eq!(a.edge(1, 0).unwrap().value(), &"BA");
+        assert_eq!(a.edge(0, 2).unwrap().value(), &"AC");
+        assert_eq!(a.edge(2, 0), None);
+        assert_eq!(a.edge(1, 2), None);
+        assert_eq!(a.edge(2, 1), None);
 
-        assert_eq!(g.edge(0, 1).unwrap().value(), &"AB");
-        assert_eq!(g.edge(1, 0).unwrap().value(), &"BA");
-        assert_eq!(g.edge(0, 2).unwrap().value(), &"AC");
-        assert_eq!(g.edge(2, 0), None);
-        assert_eq!(g.edge(1, 2), None);
-        assert_eq!(g.edge(2, 1), None);
-    }
-
-    #[test]
-    fn can_get_added_undirected_edge() {
-        let g = undirected_test_graph();
-
-        assert_eq!(g.edge(0, 1).unwrap().value(), &"AB");
-        assert_eq!(g.edge(1, 0).unwrap().value(), &"AB");
-        assert_eq!(g.edge(0, 2).unwrap().value(), &"AC");
-        assert_eq!(g.edge(2, 0).unwrap().value(), &"AC");
-        assert_eq!(g.edge(1, 2), None);
-        assert_eq!(g.edge(2, 1), None);
+        let b = undirected_test_graph();
+        assert_eq!(b.edge(0, 1).unwrap().value(), &"AB");
+        assert_eq!(b.edge(1, 0).unwrap().value(), &"AB");
+        assert_eq!(b.edge(0, 2).unwrap().value(), &"AC");
+        assert_eq!(b.edge(2, 0).unwrap().value(), &"AC");
+        assert_eq!(b.edge(1, 2), None);
+        assert_eq!(b.edge(2, 1), None);
     }
 
     #[test]
@@ -403,11 +415,16 @@ mod tests {
     #[test]
     fn can_remove_added_edge() {
         let mut g = directed_test_graph();
-
         g.remove_edge(0, 1);
         g.remove_edge(1, 0);
         g.remove_edge(0, 2);
+        assert_eq!(g.edge(0, 1), None);
+        assert_eq!(g.edge(1, 0), None);
+        assert_eq!(g.edge(0, 2), None);
 
+        let mut g = undirected_test_graph();
+        g.remove_edge(0, 1);
+        g.remove_edge(0, 2);
         assert_eq!(g.edge(0, 1), None);
         assert_eq!(g.edge(1, 0), None);
         assert_eq!(g.edge(0, 2), None);
@@ -418,9 +435,9 @@ mod tests {
         let g = directed_test_graph();
         let test = vec!["A", "B", "C"];
 
-        assert_eq!(g.iter_nodes().count(), 3);
+        assert_eq!(g.nodes().count(), 3);
 
-        g.iter_nodes()
+        g.nodes()
             .zip(test.iter().enumerate())
             .for_each(|(a, (i, &b))| {
                 assert_eq!(a.value(), b);
@@ -433,21 +450,32 @@ mod tests {
         let g = directed_test_graph();
         let test = vec!["BA", "AB", "AC"];
 
-        assert_eq!(g.iter_edges().count(), 3);
+        assert_eq!(g.edges().count(), 3);
 
-        g.iter_edges().zip(test.iter()).for_each(|(a, &b)| {
+        g.edges().zip(test.iter()).for_each(|(a, &b)| {
             assert_eq!(a.value(), b);
         })
     }
 
     #[test]
     fn can_iter_over_adj_edges() {
-        let g = directed_test_graph();
-        let node = g.node(1).unwrap();
-        let mut iter = node.iter_edges();
+        {
+            let g = directed_test_graph();
+            let node = g.node(1).unwrap();
+            let mut iter = node.iter_edges();
 
-        assert_eq!(iter.next().unwrap().value(), "BA");
-        assert_eq!(iter.next().unwrap().value(), "AB");
-        assert_eq!(iter.next(), None);
+            assert_eq!(iter.next().unwrap().value(), "BA");
+            assert_eq!(iter.next().unwrap().value(), "AB");
+            assert_eq!(iter.next(), None);
+        }
+
+        {
+            let g = undirected_test_graph();
+            let node = g.node(1).unwrap();
+            let mut iter = node.iter_edges();
+
+            assert_eq!(iter.next().unwrap().value(), "AB");
+            assert_eq!(iter.next(), None);
+        }
     }
 }
