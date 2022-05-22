@@ -213,11 +213,11 @@ impl<'a, N, E> EdgeRef<'a, N, E> {
         self.value
     }
 
-    pub fn a(self) -> NodeRef<'a, N, E> {
+    pub fn a(&self) -> NodeRef<'a, N, E> {
         self.graph.node(self.index_a).unwrap()
     }
 
-    pub fn b(self) -> NodeRef<'a, N, E> {
+    pub fn b(&self) -> NodeRef<'a, N, E> {
         self.graph.node(self.index_b).unwrap()
     }
 }
