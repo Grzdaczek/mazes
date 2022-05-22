@@ -26,13 +26,6 @@ impl<T> MatrixCell<T> {
         !self.is_empty()
     }
 
-    // pub fn unwrap(self) -> T {
-    //     match self {
-    //         MatrixCell::Empty => panic!(),
-    //         MatrixCell::Edge(e) => e,
-    //     }
-    // }
-
     pub fn unwrap_ref(&self) -> &T {
         match self {
             MatrixCell::Empty => panic!(),

@@ -12,13 +12,6 @@ impl<T> AdjacencyMatrix<T> {
         }
     }
 
-    // pub fn with_capacity(capacity: usize) -> Self {
-    //     Self {
-    //         data: Vec::with_capacity(capacity),
-    //         size: 0,
-    //     }
-    // }
-
     pub fn push_default(&mut self)
     where
         T: Default,
