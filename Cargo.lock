@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "graph"
-version = "1.1.0"
+version = "1.1.1"
 
 [[package]]
 name = "hashbrown"
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "labyrinth"
-version = "1.0.2"
+version = "1.1.2"
 dependencies = [
  "clap",
  "graph",
