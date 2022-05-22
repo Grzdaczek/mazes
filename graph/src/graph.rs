@@ -1,5 +1,5 @@
 use crate::matrix::AdjacencyMatrix;
-use std::{fmt::Debug, ops::Index};
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq)]
 enum MatrixCell<T> {
