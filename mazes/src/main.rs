@@ -6,11 +6,11 @@ use std::cell::Cell;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Width of the labyrinth
+    /// Width of the maze
     #[clap(short, long, default_value_t = 20)]
     width: usize,
 
-    /// Height of the labyrinth
+    /// Height of the maze
     #[clap(short, long, default_value_t = 10)]
     height: usize,
 }
